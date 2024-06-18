@@ -1,42 +1,172 @@
 "use client";
-// UserScreen.js
-import React, { useState } from "react";
+import Image from "next/image";
+import { useEffect, useRef, useState } from "react";
+import copo from "../../public/copo.png";
 
 const UserScreen = () => {
   const [selectedOption, setSelectedOption] = useState("");
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [isToastVisible, setIsToastVisible] = useState(false);
+  const formRef = useRef<HTMLFormElement>(null);
+  const modalContentRef = useRef<HTMLDivElement>(null);
 
-  const handleOptionChange = (e: any) => {
+  useEffect(() => {
+    const savedOption = localStorage.getItem("selectedOption");
+    if (savedOption) {
+      setSelectedOption(savedOption);
+    }
+  }, []);
+
+  const handleOptionChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setSelectedOption(e.target.value);
   };
 
+  const handleBackgroundClick = (e: React.MouseEvent<HTMLDivElement>) => {
+    if (e.target !== modalContentRef.current) {
+      handleCancel();
+    }
+  };
+
+  const handleSubmit = () => {
+    setIsModalOpen(true);
+  };
+
   const handleConfirm = () => {
-    // Lógica para confirmar a escolha do usuário
+    localStorage.setItem("selectedOption", selectedOption);
+    setIsModalOpen(false);
+    setIsToastVisible(true);
+    setTimeout(() => setIsToastVisible(false), 3000);
+  };
+
+  const handleCancel = () => {
+    setIsModalOpen(false);
   };
 
   return (
-    <div>
-      <h1>Escolha o Produto</h1>
-      <form>
-        <label className="bg-yellow-300 rounded-xl hover:scale-110 hover:transition hover:ease-in-out hover:cursor-pointer shadow-md hover:shadow-2xl">
-          Produto 1:
-          <input
-            type="radio"
-            value="product1"
-            checked={selectedOption === "product1"}
-            onChange={handleOptionChange}
-          />
-        </label>
-        <label className="bg-yellow-300 rounded-xl hover:scale-110 hover:transition hover:ease-in-out hover:cursor-pointer shadow-md hover:shadow-2xl">
-          Produto 2:
-          <input
-            type="radio"
-            value="product2"
-            checked={selectedOption === "product2"}
-            onChange={handleOptionChange}
-          />
-        </label>
+    <div className="bg-yellow-200 h-screen place-content-center justify-center">
+      <h1 className="text-center text-3xl font-semibold mb-10">
+        Onde estava o Ninho novo?
+      </h1>
+      <form
+        ref={formRef}
+        onSubmit={(e) => e.preventDefault()}
+        className="flex justify-center gap-40"
+      >
+        <div
+          className={
+            selectedOption === "product1"
+              ? "bg-yellow-400 ring-4 ring-black rounded-lg font-semibold border-black p-3"
+              : ""
+          }
+        >
+          <h2 className="text-2xl text-center mb-6">Copo 1</h2>
+          <label>
+            <input
+              type="radio"
+              value="product1"
+              checked={selectedOption === "product1"}
+              onChange={handleOptionChange}
+              style={{ display: "none" }}
+            />
+            <Image
+              src={copo}
+              alt="Copo 1"
+              width={400}
+              height={400}
+              className="hover:scale-105 transition hover:ease-in-out hover:cursor-pointer"
+            />
+          </label>
+        </div>
+        <div
+          className={
+            selectedOption === "product2"
+              ? "bg-yellow-400 rounded-lg font-semibold ring-4 ring-black p-3"
+              : ""
+          }
+        >
+          <h2 className="text-2xl text-center mb-6 ">Copo 2</h2>
+          <label>
+            <input
+              type="radio"
+              value="product2"
+              checked={selectedOption === "product2"}
+              onChange={handleOptionChange}
+              style={{ display: "none" }}
+            />
+            <Image
+              src={copo}
+              alt="Copo 2"
+              width={400}
+              height={400}
+              className="hover:scale-105 transition hover:ease-in-out hover:cursor-pointer"
+            />
+          </label>
+        </div>
       </form>
-      <button onClick={handleConfirm}>Confirmar Escolha</button>
+      <div className="flex place-content-center mt-10">
+        <button
+          onClick={handleSubmit}
+          className="bg-yellow-100 p-3 rounded-xl transition-all hover:scale-110 hover:bg-yellow-400 hover:font-bold border-2 border-black"
+        >
+          Confirmar
+        </button>
+      </div>
+      {isToastVisible && (
+        <div className="fixed top-0 right-0 m-6 bg-slate-50 text-green-800 p-4 rounded">
+          ✅ Resposta gravada com sucesso!
+        </div>
+      )}
+      {isModalOpen && (
+        <div
+          className="fixed z-10 inset-0 overflow-y-auto"
+          onClick={handleBackgroundClick}
+        >
+          <div className="flex items-end justify-center min-h-screen pt-4 px-4 pb-20 text-center sm:block sm:p-0">
+            <div className="fixed inset-0 transition-opacity">
+              <div className="absolute inset-0 bg-gray-500 opacity-75"></div>
+            </div>
+            <span className="hidden sm:inline-block sm:align-middle sm:h-screen">
+              &#8203;
+            </span>
+            <div
+              ref={modalContentRef}
+              className="inline-block align-bottom bg-white rounded-lg text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-lg sm:w-full"
+            >
+              <div className="bg-white px-4 pt-5 pb-4 sm:p-6 sm:pb-4">
+                <div className="sm:flex sm:items-start">
+                  <div className="mt-3 text-center sm:mt-0 sm:ml-4 sm:text-left">
+                    <h3
+                      className="text-lg leading-6 font-medium text-gray-900"
+                      id="modal-title"
+                    >
+                      Confirmar escolha
+                    </h3>
+                    <div className="mt-2">
+                      <p className="text-sm text-gray-500">Está certo disso?</p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+              <div className="bg-gray-50  px-4 py-3 sm:px-6 sm:flex sm:flex-row-reverse">
+                <button
+                  type="button"
+                  className="w-full inline-flex justify-center rounded-md border border-transparent shadow-sm px-4 py-2 bg-green-600 text-base font-medium text-white hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500 sm:ml-3 sm:w-auto sm:text-sm"
+                  onClick={handleConfirm}
+                >
+                  Confirmar
+                </button>
+                <button
+                  type="button"
+                  className="mt-3 w-full inline-flex justify-center rounded-md border border-gray-300 shadow-sm px-4 py-2 bg-white text-base font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 sm:mt-0 sm:ml-3 sm:w-auto sm:text-sm"
+                  onClick={handleCancel}
+                >
+                  Cancelar
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

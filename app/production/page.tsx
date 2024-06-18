@@ -1,6 +1,6 @@
 "use client";
 import Image from "next/image";
-import React, { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import copo from "../../public/copo.png";
 
 const ProductionScreen = () => {
@@ -27,7 +27,7 @@ const ProductionScreen = () => {
   return (
     <div className="bg-yellow-200 h-screen place-content-center justify-center">
       <h1 className="text-center text-3xl font-semibold mb-10">
-        Onde estará o produto correto?
+        Onde estará o Ninho novo?
       </h1>
       <form
         ref={formRef}

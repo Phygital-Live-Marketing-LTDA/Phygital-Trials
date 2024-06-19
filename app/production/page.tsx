@@ -2,9 +2,13 @@
 import Image from "next/image";
 import { useEffect, useRef, useState } from "react";
 import copo from "../../public/copo.png";
+import { db } from "../config";
+import { collection, doc, getDoc, setDoc } from "firebase/firestore";
+import { useOnlineStatus } from "../store/statusContext";
 
 const ProductionScreen = () => {
   const [selectedProduct, setSelectedProduct] = useState("");
+  const { isOnline } = useOnlineStatus();
   const formRef = useRef<HTMLFormElement>(null);
 
   useEffect(() => {
@@ -14,14 +18,47 @@ const ProductionScreen = () => {
     }
   }, []);
 
+  useEffect(() => {
+    if (isOnline) {
+      const fetchSelectedProduct = async () => {
+        const docRef = doc(collection(db, "game"), "current");
+        const docSnap = await getDoc(docRef);
+
+        if (docSnap.exists()) {
+          if (
+            docSnap.data().selectedProduct !==
+            localStorage.getItem("selectedProduct")
+          ) {
+            localStorage.setItem(
+              "selectedProduct",
+              docSnap.data().selectedProduct
+            );
+            setSelectedProduct(docSnap.data().selectedProduct);
+          }
+        } else {
+          console.log("No such document!");
+        }
+      };
+      fetchSelectedProduct();
+
+      const localProduct = localStorage.getItem("selectedProduct");
+      if (localProduct) {
+        const docRef = doc(collection(db, "game"), "current");
+        setDoc(docRef, { selectedProduct: localProduct });
+      }
+    }
+  }, [isOnline]);
+
   const handleProductChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setSelectedProduct(e.target.value);
+    localStorage.setItem("selectedProduct", e.target.value);
   };
 
-  const handleSubmit = () => {
-    // Salvar a opção selecionada no localStorage
-    localStorage.setItem("selectedProduct", selectedProduct);
-    // Lógica para salvar os produtos corretos
+  const handleSubmit = async () => {
+    if (isOnline) {
+      const docRef = doc(collection(db, "game"), "current");
+      await setDoc(docRef, { selectedProduct: selectedProduct });
+    }
   };
 
   return (

@@ -2,15 +2,37 @@
 import Image from "next/image";
 import { useEffect, useRef, useState } from "react";
 import copo from "../../public/copo.png";
+import { v4 as uuidv4 } from "uuid";
+import { db } from "../config";
+import { collection, doc, setDoc } from "firebase/firestore";
+import { useOnlineStatus } from "../store/statusContext";
 
 const UserScreen = () => {
   const [selectedOption, setSelectedOption] = useState("");
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isToastVisible, setIsToastVisible] = useState(false);
+
+  const { isOnline } = useOnlineStatus();
+
+  const [showMessage, setShowMessage] = useState(true);
+
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setShowMessage(false);
+    }, 3000);
+
+    return () => clearTimeout(timer);
+  }, []);
+
   const formRef = useRef<HTMLFormElement>(null);
   const modalContentRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
+    let userId = localStorage.getItem("userId");
+    if (!userId) {
+      userId = uuidv4();
+      localStorage.setItem("userId", userId);
+    }
     const savedOption = localStorage.getItem("selectedOption");
     if (savedOption) {
       setSelectedOption(savedOption);
@@ -31,8 +53,24 @@ const UserScreen = () => {
     setIsModalOpen(true);
   };
 
-  const handleConfirm = () => {
+  const handleConfirm = async () => {
     localStorage.setItem("selectedOption", selectedOption);
+    const userId = localStorage.getItem("userId");
+    if (!userId) {
+      console.error("User ID is null");
+      return;
+    }
+    // Verifique a conexão de rede antes de sincronizar os dados com o servidor
+    if (isOnline) {
+      const gameDoc = doc(db, "game", userId);
+      const userChoicesCollection = collection(gameDoc, "userChoices");
+      const userDoc = doc(userChoicesCollection, "selectedOption");
+      await setDoc(
+        userDoc,
+        { selectedOption: selectedOption },
+        { merge: true }
+      );
+    }
     setIsModalOpen(false);
     setIsToastVisible(true);
     setTimeout(() => setIsToastVisible(false), 3000);
@@ -45,7 +83,7 @@ const UserScreen = () => {
   return (
     <div className="bg-yellow-200 h-screen place-content-center justify-center">
       <h1 className="text-center text-3xl font-semibold mb-10">
-        Onde estava o Ninho novo?
+        Onde você acha que estava o Ninho novo?
       </h1>
       <form
         ref={formRef}
@@ -116,6 +154,16 @@ const UserScreen = () => {
           ✅ Resposta gravada com sucesso!
         </div>
       )}
+      {showMessage &&
+        (!isOnline ? (
+          <div className="fixed top-0 right-0 m-6 bg-slate-50 text-red-800 p-4 rounded">
+            ❌ Você não está conectado!
+          </div>
+        ) : (
+          <div className="fixed top-0 right-0 m-6 bg-slate-50 text-green-800 p-4 rounded">
+            ✅ Conectado!
+          </div>
+        ))}
       {isModalOpen && (
         <div
           className="fixed z-10 inset-0 overflow-y-auto"
@@ -142,7 +190,9 @@ const UserScreen = () => {
                       Confirmar escolha
                     </h3>
                     <div className="mt-2">
-                      <p className="text-sm text-gray-500">Está certo disso?</p>
+                      <p className="text-sm text-gray-500">
+                        Está certo disso? 👀
+                      </p>
                     </div>
                   </div>
                 </div>
@@ -157,7 +207,7 @@ const UserScreen = () => {
                 </button>
                 <button
                   type="button"
-                  className="mt-3 w-full inline-flex justify-center rounded-md border border-gray-300 shadow-sm px-4 py-2 bg-white text-base font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 sm:mt-0 sm:ml-3 sm:w-auto sm:text-sm"
+                  className="mt-3 w-full inline-flex justify-center rounded-md border border-gray-300 shadow-sm px-4 py-2 bg-white text-base font-medium text-gray-700 hover:bg-red-500 hover:text-white  focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 sm:mt-0 sm:ml-3 sm:w-auto sm:text-sm"
                   onClick={handleCancel}
                 >
                   Cancelar

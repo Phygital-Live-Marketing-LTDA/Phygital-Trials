@@ -1,105 +1,104 @@
 "use client";
 import { useEffect, useState } from "react";
-import {
-  doc,
-  getDoc,
-  collection,
-  getDocs,
-  DocumentData,
-} from "firebase/firestore";
+import { collection, doc, getDoc, onSnapshot } from "firebase/firestore";
 import { db } from "../config";
-import {
-  BarChart,
-  Bar,
-  XAxis,
-  YAxis,
-  Tooltip,
-  Legend,
-  CartesianGrid,
-} from "recharts";
+import ResultsChart from "../components/chart";
+import { useOnlineStatus } from "../store/statusContext";
+import Link from "next/link";
 
-const ResultScreen = () => {
-  const [correctChoices, setCorrectChoices] = useState<DocumentData[]>([]);
-  const [incorrectChoices, setIncorrectChoices] = useState<DocumentData[]>([]);
-  const [userId, setUserId] = useState<string | null>(null);
+const ResultsScreen = () => {
+  const [results, setResults] = useState<
+    { userId: string; selectedOption: any; isCorrect: boolean }[]
+  >([]);
+  const [loading, setLoading] = useState(true);
+  const [showMessage, setShowMessage] = useState(true);
+
+  const { isOnline } = useOnlineStatus();
 
   useEffect(() => {
-    if (typeof window !== "undefined") {
-      setUserId(localStorage.getItem("userId"));
-    }
+    const timer = setTimeout(() => {
+      setShowMessage(false);
+    }, 3000);
+
+    return () => clearTimeout(timer);
   }, []);
 
   useEffect(() => {
-    if (!userId) return;
+    const gameCollection = collection(db, "game");
 
-    const fetchData = async () => {
-      const docRef = doc(collection(db, "game"), "current");
-      const docSnap = await getDoc(docRef);
+    const unsubscribe = onSnapshot(gameCollection, async (gameSnapshot) => {
+      const results = [];
 
-      if (docSnap.exists()) {
-        const gameData = docSnap.data();
-        const productionChoice = gameData.selectedProduct;
-        console.log("Production choice:", productionChoice);
+      for (const gameDoc of gameSnapshot.docs) {
+        const userId = gameDoc.id;
 
-        const userRef = doc(db, "game", userId);
-        const userChoicesCollection = collection(userRef, "userChoices");
-        const userChoicesSnapshot = await getDocs(userChoicesCollection);
+        if (userId === "current") continue;
 
-        let newCorrectChoices: DocumentData[] = [];
-        let newIncorrectChoices: DocumentData[] = [];
+        const userDocRef = doc(db, "game", userId);
+        const userDoc = await getDoc(userDocRef);
 
-        userChoicesSnapshot.forEach((doc) => {
-          const userChoiceData = doc.data();
-          const selectedOption = userChoiceData.selectedOption;
-          if (selectedOption === productionChoice) {
-            newCorrectChoices.push(doc.data());
-          } else {
-            newIncorrectChoices.push(doc.data());
-          }
-        });
+        if (userDoc && userDoc.exists()) {
+          const selectedOption = userDoc.data().selectedOption;
+          const correctProductRef = doc(db, "game", "current");
+          const correctProductDoc = await getDoc(correctProductRef);
+          const correctProduct = correctProductDoc.data()?.selectedProduct;
 
-        setCorrectChoices(newCorrectChoices);
-        setIncorrectChoices(newIncorrectChoices);
+          results.push({
+            userId,
+            selectedOption,
+            isCorrect: selectedOption === correctProduct,
+          });
+        }
       }
-    };
 
-    fetchData();
-  }, [userId]);
+      setResults(results);
+      setLoading(false);
+    });
 
-  const data = [
-    {
-      name: "Respostas",
-      Corretas: correctChoices.length,
-      Incorretas: incorrectChoices.length,
-    },
-  ];
+    // Limpe a inscrição ao desmontar
+    return () => unsubscribe();
+  }, []);
 
-  if (!userId) return null;
+  if (loading) {
+    return (
+      <div className="bg-yellow-200 w-full h-screen flex items-center justify-center">
+        <div className="animate-spin rounded-full h-32 w-32 border-t-4 border-b-4 border-indigo-500"></div>
+      </div>
+    );
+  }
 
   return (
-    <div>
-      <h1>Result Screen</h1>
-      <h2>Correct Choices</h2>
-      <p>{correctChoices.length}</p>
-      <h2>Incorrect Choices</h2>
-      <ul>
-        <p>{incorrectChoices.length}</p>
-      </ul>
-      <BarChart width={500} height={300} data={data}>
-        <CartesianGrid strokeDasharray="3 3" />
-        <XAxis dataKey="name" />
-        <YAxis
-          tickFormatter={(value) =>
-            value === 0 ? "" : Math.floor(value).toString()
-          }
-        />
-        <Tooltip />
-        <Legend />
-        <Bar dataKey="Corretas" fill="#8884d8" />
-        <Bar dataKey="Incorretas" fill="#82ca9d" />
-      </BarChart>
+    <div className="bg-yellow-200 h-screen place-content-center justify-center">
+      <h1 className="relative text-center text-5xl font-semibold">
+        <span className="animate-pulse">🔴</span>
+        Resultados ao vivo
+      </h1>
+      <h2 className="text-center text-2xl font-semibold">
+        Total de votos: {results.length}
+      </h2>
+      <div className="flex items-center justify-center">
+        <ResultsChart results={results} />
+      </div>
+      {showMessage &&
+        (!isOnline ? (
+          <div className="fixed top-0 right-0 m-6 bg-slate-50 text-red-800 p-4 rounded">
+            ❌ Você não está conectado!
+          </div>
+        ) : (
+          <div className="fixed top-0 right-0 m-6 bg-slate-50 text-green-800 p-4 rounded">
+            ✅ Conectado!
+          </div>
+        ))}
+      <div className="flex gap-6 place-content-center mt-10">
+        <Link
+          href="/"
+          className="bg-yellow-100 p-3 rounded-xl transition-all hover:scale-110 hover:bg-yellow-400 hover:font-bold border-2 border-black"
+        >
+          Menu
+        </Link>
+      </div>
     </div>
   );
 };
 
-export default ResultScreen;
+export default ResultsScreen;

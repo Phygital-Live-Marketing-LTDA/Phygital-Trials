@@ -5,11 +5,23 @@ import copo from "../../public/copo.png";
 import { db } from "../config";
 import { collection, doc, getDoc, setDoc } from "firebase/firestore";
 import { useOnlineStatus } from "../store/statusContext";
+import Link from "next/link";
 
 const ProductionScreen = () => {
   const [selectedProduct, setSelectedProduct] = useState("");
+  const [showMessage, setShowMessage] = useState(true);
+  const [isToastVisible, setIsToastVisible] = useState(false);
+
   const { isOnline } = useOnlineStatus();
   const formRef = useRef<HTMLFormElement>(null);
+
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setShowMessage(false);
+    }, 3000);
+
+    return () => clearTimeout(timer);
+  }, []);
 
   useEffect(() => {
     const savedProduct = localStorage.getItem("selectedProduct");
@@ -58,6 +70,8 @@ const ProductionScreen = () => {
     if (isOnline) {
       const docRef = doc(collection(db, "game"), "current");
       await setDoc(docRef, { selectedProduct: selectedProduct });
+      setIsToastVisible(true);
+      setTimeout(() => setIsToastVisible(false), 3000);
     }
   };
 
@@ -96,6 +110,21 @@ const ProductionScreen = () => {
             />
           </label>
         </div>
+        {showMessage &&
+          (!isOnline ? (
+            <div className="fixed top-0 right-0 m-6 bg-slate-50 text-red-800 p-4 rounded">
+              ❌ Você não está conectado!
+            </div>
+          ) : (
+            <div className="fixed top-0 right-0 m-6 bg-slate-50 text-green-800 p-4 rounded">
+              ✅ Conectado!
+            </div>
+          ))}
+        {isToastVisible && (
+          <div className="fixed top-0 right-0 m-6 bg-slate-50 text-green-800 p-4 rounded">
+            ✅ Resposta gravada com sucesso!
+          </div>
+        )}
         <div
           className={
             selectedProduct === "product2"
@@ -122,7 +151,13 @@ const ProductionScreen = () => {
           </label>
         </div>
       </form>
-      <div className="flex place-content-center mt-10">
+      <div className="flex gap-6 place-content-center mt-10">
+        <Link
+          href="/"
+          className="bg-yellow-100 p-3 rounded-xl transition-all hover:scale-110 hover:bg-yellow-400 hover:font-bold border-2 border-black"
+        >
+          Menu
+        </Link>
         <button
           onClick={handleSubmit}
           className="bg-yellow-100 p-3 rounded-xl transition-all hover:scale-110 hover:bg-yellow-400 hover:font-bold border-2 border-black"

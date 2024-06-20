@@ -4,17 +4,17 @@ import { useEffect, useRef, useState } from "react";
 import copo from "../../public/copo.png";
 import { v4 as uuidv4 } from "uuid";
 import { db } from "../config";
-import { collection, doc, setDoc } from "firebase/firestore";
+import { doc, setDoc } from "firebase/firestore";
 import { useOnlineStatus } from "../store/statusContext";
+import Link from "next/link";
 
 const UserScreen = () => {
   const [selectedOption, setSelectedOption] = useState("");
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isToastVisible, setIsToastVisible] = useState(false);
+  const [showMessage, setShowMessage] = useState(true);
 
   const { isOnline } = useOnlineStatus();
-
-  const [showMessage, setShowMessage] = useState(true);
 
   useEffect(() => {
     const timer = setTimeout(() => {
@@ -60,13 +60,11 @@ const UserScreen = () => {
       console.error("User ID is null");
       return;
     }
-    // Verifique a conexão de rede antes de sincronizar os dados com o servidor
+
     if (isOnline) {
       const gameDoc = doc(db, "game", userId);
-      const userChoicesCollection = collection(gameDoc, "userChoices");
-      const userDoc = doc(userChoicesCollection, "selectedOption");
       await setDoc(
-        userDoc,
+        gameDoc,
         { selectedOption: selectedOption },
         { merge: true }
       );
@@ -141,7 +139,13 @@ const UserScreen = () => {
           </label>
         </div>
       </form>
-      <div className="flex place-content-center mt-10">
+      <div className="flex gap-6 place-content-center mt-10">
+        <Link
+          href="/"
+          className="bg-yellow-100 p-3 rounded-xl transition-all hover:scale-110 hover:bg-yellow-400 hover:font-bold border-2 border-black"
+        >
+          Menu
+        </Link>
         <button
           onClick={handleSubmit}
           className="bg-yellow-100 p-3 rounded-xl transition-all hover:scale-110 hover:bg-yellow-400 hover:font-bold border-2 border-black"

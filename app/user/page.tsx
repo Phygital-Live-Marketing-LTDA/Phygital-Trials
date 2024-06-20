@@ -1,18 +1,27 @@
 "use client";
 import Image from "next/image";
-import { useEffect, useRef, useState } from "react";
-import copo from "../../public/copo.png";
-import { v4 as uuidv4 } from "uuid";
-import { db } from "../config";
-import { doc, setDoc } from "firebase/firestore";
-import { useOnlineStatus } from "../store/statusContext";
 import Link from "next/link";
+import { useEffect, useRef, useState } from "react";
+import { doc, getDoc, setDoc } from "firebase/firestore";
+import { Howl } from "howler";
+import { v4 as uuidv4 } from "uuid";
+import { useOnlineStatus } from "../store/statusContext";
+
+import { db } from "../config";
+import copo from "../../public/copo.png";
+import { useRouter } from "next/navigation";
 
 const UserScreen = () => {
+  const router = useRouter();
+
+  const formRef = useRef<HTMLFormElement>(null);
+  const modalContentRef = useRef<HTMLDivElement>(null);
+
   const [selectedOption, setSelectedOption] = useState("");
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isToastVisible, setIsToastVisible] = useState(false);
   const [showMessage, setShowMessage] = useState(true);
+  const [isMounted, setIsMounted] = useState(false);
 
   const { isOnline } = useOnlineStatus();
 
@@ -23,9 +32,6 @@ const UserScreen = () => {
 
     return () => clearTimeout(timer);
   }, []);
-
-  const formRef = useRef<HTMLFormElement>(null);
-  const modalContentRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     let userId = localStorage.getItem("userId");
@@ -68,10 +74,18 @@ const UserScreen = () => {
         { selectedOption: selectedOption },
         { merge: true }
       );
+      const productionDoc = doc(db, "game", "current");
+      const productionDocAnswer = await getDoc(productionDoc);
+      const correctAnswer = productionDocAnswer.data()?.selectedProduct;
+      const sound = new Howl({
+        src: [selectedOption === correctAnswer ? "/success.mp3" : "/error.mp3"],
+      });
+      sound.play();
     }
     setIsModalOpen(false);
     setIsToastVisible(true);
     setTimeout(() => setIsToastVisible(false), 3000);
+    router.push("/result");
   };
 
   const handleCancel = () => {
